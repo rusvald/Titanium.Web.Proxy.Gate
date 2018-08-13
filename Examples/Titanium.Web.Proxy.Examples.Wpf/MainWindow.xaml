@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:Titanium.Web.Proxy.Examples.Wpf"
         mc:Ignorable="d"
         Title="MainWindow" Height="500" Width="1000" WindowState="Maximized"
-        DataContext="{Binding RelativeSource={RelativeSource Self}}">
+        DataContext="{Binding RelativeSource={RelativeSource Self}}" Loaded="Window_Loaded">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="500" />
@@ -22,6 +22,7 @@
             <CheckBox IsChecked="{Binding SaveTrafficDataToFile}" Content="Save data to file" VerticalAlignment="Center"></CheckBox>
             <TextBox Text="{Binding SaveTrafficDataPath}" IsReadOnly="True" MinWidth="256" MinHeight="32" Margin="20 0 0 0"></TextBox>
             <CheckBox IsChecked="{Binding FilterTrafficBySettings}" Content="Filter traffic"  Margin="20 0 0 0" VerticalAlignment="Center"></CheckBox>
+            <Button Content="Reload Filters" Margin="10 4 4 4" Padding="8 0 8 0" Click="Button_Click"></Button>
         </StackPanel>
         <GridSplitter Grid.Column="1" Grid.Row="1" HorizontalAlignment="Stretch" />
         <ListView Grid.Column="0" Grid.Row="1" HorizontalAlignment="Stretch" ItemsSource="{Binding Sessions}"
@@ -49,6 +50,15 @@
                     </Grid.RowDefinitions>
                     <TextBox x:Name="TextBoxRequest" Grid.Row="0" />
                     <TextBox x:Name="TextBoxResponse" Grid.Row="1" />
+                </Grid>
+            </TabItem>
+            <TabItem Header="Filters">
+                <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    <Grid.RowDefinitions>
+                        <RowDefinition />
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+                    <TextBox Name="tbFilters" Grid.Row="0" IsReadOnly="True" Text="" />
                 </Grid>
             </TabItem>
         </TabControl>

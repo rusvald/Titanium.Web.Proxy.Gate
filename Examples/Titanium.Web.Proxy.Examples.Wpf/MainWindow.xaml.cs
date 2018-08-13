@@ -44,6 +44,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
         private SessionListItem selectedSession;
 
         private List<string> reservedFiles = new List<string>();
+        Models.FilterMatchFinder _filterMatchFinder;
 
         public MainWindow()
         {
@@ -109,6 +110,8 @@ namespace Titanium.Web.Proxy.Examples.Wpf
 #endif
             FilterSettingsFile = "filter.config";
 
+            _filterMatchFinder = new Models.FilterMatchFinder(FilterSettingsFile);
+
             InitializeComponent();
         }
 
@@ -170,7 +173,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                 isSave = SaveTrafficDataToFile;
                 savePath = SaveTrafficDataPath;
             });
-
+            
 
             //if (isSave)
             //{
@@ -207,12 +210,15 @@ namespace Titanium.Web.Proxy.Examples.Wpf
         {
             bool isSave = false;
             string savePath = string.Empty;
+            bool terminateSession = false;
+            bool filterTraffic = false;
 
             SessionListItem item = null;
             await Dispatcher.InvokeAsync(() => {
                 item = AddSession(e);
                 isSave = SaveTrafficDataToFile;
                 savePath = SaveTrafficDataPath;
+                filterTraffic = FilterTrafficBySettings;
             });
 
             if (e.WebSession.Request.HasBody)
@@ -221,6 +227,12 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                 await e.GetRequestBody();
             }
 
+            Models.MatchResult mresult = _filterMatchFinder.HasMatches(e.WebSession.Request.Url);
+            if (mresult.IsMatch && filterTraffic)
+            {
+                e.TerminateSession();
+                terminateSession = true;
+            }
             if (isSave)
             {
                 string hostName = e.WebSession.Request.Host.Replace(":", "_Port").Replace(".", "_");
@@ -228,8 +240,17 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                     savePath, DateTime.Now, hostName);
                 string fileNameBody = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_B_REQ_{2}.log",
                     savePath, DateTime.Now, hostName);
-                WriteToLog(fileNameHeader, e.WebSession.Request.HeaderText);
-                e.UserData = e.WebSession.Request.HeaderText;
+
+                if (terminateSession)
+                {
+                    WriteToLog(fileNameHeader, e.WebSession.Request.HeaderText, string.Format( "Willbe termineted by {0}", mresult.MatchedWildCard));
+                }
+                else
+                {
+                    WriteToLog(fileNameHeader, e.WebSession.Request.HeaderText);
+                }
+                e.UserData = terminateSession ? (object)mresult : e.WebSession.Request.HeaderText;
+
                 if (e.WebSession.Request.IsBodyRead && e.WebSession.Request.HasBody)
                     WriteToLog(fileNameBody, e.WebSession.Request.Body, e.WebSession.Request.Body.Length);
                 else if (!e.WebSession.Request.HasBody)
@@ -284,7 +305,21 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                     savePath, DateTime.Now, hostName);
                 string fileNameBody = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_B_RES_{2}.log",
                     savePath, DateTime.Now, hostName);
-                WriteToLog(fileNameHeader, e.WebSession.Response.HeaderText, e.UserData.ToString());
+
+                if(e.UserData is Models.MatchResult)
+                {
+                    Models.MatchResult res = e.UserData as Models.MatchResult;
+                    WriteToLog(
+                        fileNameHeader,
+                        e.WebSession.Response.HeaderText,
+                        string.Format( "Session Terminated. By wildcard {0}. Url {1}", res.MatchedWildCard, res.ProcessingString));
+                }
+                else
+                {
+                    WriteToLog(fileNameHeader, e.WebSession.Response.HeaderText, e.UserData.ToString());
+                }
+                
+
                 if (e.WebSession.Response.IsBodyRead && e.WebSession.Response.HasBody)
                     WriteToLog(fileNameBody, e.WebSession.Response.Body, e.WebSession.Response.Body.Length);
                 else if (!e.WebSession.Response.HasBody)
@@ -494,5 +529,18 @@ namespace Titanium.Web.Proxy.Examples.Wpf
             }
         }
 
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            var oldCur = Cursor;
+            Cursor = Cursors.Wait;
+            _filterMatchFinder = new Models.FilterMatchFinder(FilterSettingsFile);
+            tbFilters.Text = _filterMatchFinder.FiltersInfo;
+            Cursor = oldCur;
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            tbFilters.Text = _filterMatchFinder.FiltersInfo;
+        }
     }
 }
