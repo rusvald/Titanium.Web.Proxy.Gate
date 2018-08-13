@@ -8,7 +8,7 @@ using Titanium.Web.Proxy.Models;
 
 namespace Titanium.Web.Proxy.Helpers.WinHttp
 {
-    internal sealed class WinHttpWebProxyFinder : IDisposable
+    public sealed class WinHttpWebProxyFinder : IDisposable
     {
         private readonly WinHttpHandle session;
         private bool autoDetectFailed;

@@ -137,6 +137,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
 
         private string GetProcessDescription(int processId)
         {
+            //return string.Empty;
             try
             {
                 var process = System.Diagnostics.Process.GetProcessById(processId);

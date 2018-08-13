@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Titanium.Web.Proxy.Http
 {
-    class InternalDataStore : Dictionary<string, object>
+    public class InternalDataStore : Dictionary<string, object>
     {
         public bool TryGetValueAs<T>(string key, out T value)
         {

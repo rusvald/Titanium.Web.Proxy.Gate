@@ -72,7 +72,7 @@ namespace Titanium.Web.Proxy.Network
         ///     prompting for UAC if required?
         /// </param>
         /// <param name="exceptionFunc"></param>
-        internal CertificateManager(string rootCertificateName, string rootCertificateIssuerName,
+        public CertificateManager(string rootCertificateName, string rootCertificateIssuerName,
             bool userTrustRootCertificate, bool machineTrustRootCertificate, bool trustRootCertificateAsAdmin,
             ExceptionHandler exceptionFunc)
         {
@@ -406,7 +406,7 @@ namespace Titanium.Web.Proxy.Network
         /// <param name="certificateName"></param>
         /// <param name="isRootCertificate"></param>
         /// <returns></returns>
-        internal X509Certificate2 CreateCertificate(string certificateName, bool isRootCertificate)
+        public X509Certificate2 CreateCertificate(string certificateName, bool isRootCertificate)
         {
             X509Certificate2 certificate = null;
             try
@@ -510,7 +510,7 @@ namespace Titanium.Web.Proxy.Network
         /// <summary>
         ///     A method to clear outdated certificates
         /// </summary>
-        internal async void ClearIdleCertificates()
+        public async void ClearIdleCertificates()
         {
             clearCertificates = true;
             while (clearCertificates)
@@ -533,7 +533,7 @@ namespace Titanium.Web.Proxy.Network
         /// <summary>
         ///     Stops the certificate cache clear process
         /// </summary>
-        internal void StopClearIdleCertificates()
+        public void StopClearIdleCertificates()
         {
             clearCertificates = false;
         }

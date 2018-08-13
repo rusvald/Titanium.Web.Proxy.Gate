@@ -9,7 +9,7 @@ namespace Titanium.Web.Proxy.Network.WinAuth
     ///     NTLM process details below
     ///     https://blogs.msdn.microsoft.com/chiranth/2013/09/20/ntlm-want-to-know-how-it-works/
     /// </summary>
-    internal static class WinAuthHandler
+    public static class WinAuthHandler
     {
         /// <summary>
         ///     Get the initial client token for server
@@ -19,7 +19,7 @@ namespace Titanium.Web.Proxy.Network.WinAuth
         /// <param name="authScheme"></param>
         /// <param name="data"></param>
         /// <returns></returns>
-        internal static string GetInitialAuthToken(string serverHostname, string authScheme, InternalDataStore data)
+        public static string GetInitialAuthToken(string serverHostname, string authScheme, InternalDataStore data)
         {
             var tokenBytes = WinAuthEndPoint.AcquireInitialSecurityToken(serverHostname, authScheme, data);
             return string.Concat(" ", Convert.ToBase64String(tokenBytes));

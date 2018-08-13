@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -25,6 +26,15 @@ namespace Titanium.Web.Proxy.Examples.Wpf
         public static readonly DependencyProperty ServerConnectionCountProperty = DependencyProperty.Register(
             nameof(ServerConnectionCount), typeof(int), typeof(MainWindow), new PropertyMetadata(default(int)));
 
+        public static readonly DependencyProperty SaveTrafficDataToFileProperty = DependencyProperty.Register(
+            nameof(SaveTrafficDataToFile), typeof(bool), typeof(MainWindow), new PropertyMetadata(default(bool)));
+
+        public static readonly DependencyProperty SaveTrafficDataPathProperty = DependencyProperty.Register(
+            nameof(SaveTrafficDataPath), typeof(string), typeof(MainWindow), new PropertyMetadata(default(string)));
+
+        public static readonly DependencyProperty FilterTrafficBySettingsProperty = DependencyProperty.Register(
+            nameof(FilterTrafficBySettings), typeof(bool), typeof(MainWindow), new PropertyMetadata(default(bool)));
+
         private readonly ProxyServer proxyServer;
 
         private readonly Dictionary<HttpWebClient, SessionListItem> sessionDictionary =
@@ -32,6 +42,8 @@ namespace Titanium.Web.Proxy.Examples.Wpf
 
         private int lastSessionNumber;
         private SessionListItem selectedSession;
+
+        private List<string> reservedFiles = new List<string>();
 
         public MainWindow()
         {
@@ -90,10 +102,33 @@ namespace Titanium.Web.Proxy.Examples.Wpf
 
             proxyServer.SetAsSystemProxy(explicitEndPoint, ProxyProtocolType.AllHttp);
 
+#if DEBUG
+            SaveTrafficDataPath = Path.Combine( Environment.CurrentDirectory, "Temp");
+#else
+            SaveTrafficDataPath = Path.Combine("h:\\Temp", "TitaniumWebProxy");
+#endif
+            FilterSettingsFile = "filter.config";
+
             InitializeComponent();
         }
 
         public ObservableCollection<SessionListItem> Sessions { get; } = new ObservableCollection<SessionListItem>();
+        public bool SaveTrafficDataToFile
+        {
+            get { return (bool)GetValue(SaveTrafficDataToFileProperty); }
+            set { SetValue(SaveTrafficDataToFileProperty, value); }
+        }
+        public string SaveTrafficDataPath
+        {
+            get { return (string)GetValue(SaveTrafficDataPathProperty); }
+            set { SetValue(SaveTrafficDataPathProperty, value); }
+        }
+        public bool FilterTrafficBySettings
+        {
+            get { return (bool)GetValue(FilterTrafficBySettingsProperty); }
+            set { SetValue(FilterTrafficBySettingsProperty, value); }
+        }
+        public string FilterSettingsFile { get; set; }
 
         public SessionListItem SelectedSession
         {
@@ -122,13 +157,36 @@ namespace Titanium.Web.Proxy.Examples.Wpf
 
         private async Task ProxyServer_BeforeTunnelConnectRequest(object sender, TunnelConnectSessionEventArgs e)
         {
+            bool isSave = false;
+            string savePath = string.Empty;
             string hostname = e.WebSession.Request.RequestUri.Host;
-            if (hostname.EndsWith("webex.com"))
-            {
-                e.DecryptSsl = false;
-            }
+            //if (hostname.EndsWith("webex.com"))
+            //{
+            //    e.DecryptSsl = false;
+            //}
 
-            await Dispatcher.InvokeAsync(() => { AddSession(e); });
+            await Dispatcher.InvokeAsync(() => {
+                AddSession(e);
+                isSave = SaveTrafficDataToFile;
+                savePath = SaveTrafficDataPath;
+            });
+
+
+            //if (isSave)
+            //{
+            //    string hostName = e.WebSession.Request.Host.Replace(":", "_Port").Replace(".", "_");
+            //    string fileNameHeader = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_H_REQ_{2}.log",
+            //        savePath, DateTime.Now, hostName);
+            //    string fileNameBody = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_B_REQ_{2}.log",
+            //        savePath, DateTime.Now, hostName);
+            //    WriteToLog(fileNameHeader, e.WebSession.Request.HeaderText);
+            //    if (e.WebSession.Request.IsBodyRead && e.WebSession.Request.HasBody)
+            //        WriteToLog(fileNameBody, e.WebSession.Request.Body, e.WebSession.Request.Body.Length);
+            //    else if (!e.WebSession.Request.HasBody)
+            //        WriteToLog(fileNameBody, "Titanium.Web.Proxy: Body not exist.");
+            //    else if (!e.WebSession.Request.IsBodyRead)
+            //        WriteToLog(fileNameBody, "Titanium.Web.Proxy: Body not read yet.");
+            //}
         }
 
         private async Task ProxyServer_BeforeTunnelConnectResponse(object sender, TunnelConnectSessionEventArgs e)
@@ -141,17 +199,43 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                     item.Update();
                 }
             });
+
+            
         }
 
         private async Task ProxyServer_BeforeRequest(object sender, SessionEventArgs e)
         {
+            bool isSave = false;
+            string savePath = string.Empty;
+
             SessionListItem item = null;
-            await Dispatcher.InvokeAsync(() => { item = AddSession(e); });
+            await Dispatcher.InvokeAsync(() => {
+                item = AddSession(e);
+                isSave = SaveTrafficDataToFile;
+                savePath = SaveTrafficDataPath;
+            });
 
             if (e.WebSession.Request.HasBody)
             {
                 e.WebSession.Request.KeepBody = true;
                 await e.GetRequestBody();
+            }
+
+            if (isSave)
+            {
+                string hostName = e.WebSession.Request.Host.Replace(":", "_Port").Replace(".", "_");
+                string fileNameHeader = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_H_REQ_{2}.log",
+                    savePath, DateTime.Now, hostName);
+                string fileNameBody = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_B_REQ_{2}.log",
+                    savePath, DateTime.Now, hostName);
+                WriteToLog(fileNameHeader, e.WebSession.Request.HeaderText);
+                e.UserData = e.WebSession.Request.HeaderText;
+                if (e.WebSession.Request.IsBodyRead && e.WebSession.Request.HasBody)
+                    WriteToLog(fileNameBody, e.WebSession.Request.Body, e.WebSession.Request.Body.Length);
+                else if (!e.WebSession.Request.HasBody)
+                    WriteToLog(fileNameBody, "Titanium.Web.Proxy: Body not exist.");
+                else if (!e.WebSession.Request.IsBodyRead)
+                    WriteToLog(fileNameBody, "Titanium.Web.Proxy: Body not read yet.");
             }
         }
 
@@ -180,6 +264,8 @@ namespace Titanium.Web.Proxy.Examples.Wpf
 
         private async Task ProxyServer_AfterResponse(object sender, SessionEventArgs e)
         {
+            bool isSave = false;
+            string savePath = string.Empty;
             await Dispatcher.InvokeAsync(() =>
             {
                 SessionListItem item;
@@ -187,7 +273,25 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                 {
                     item.Exception = e.Exception;
                 }
+                isSave = SaveTrafficDataToFile;
+                savePath = SaveTrafficDataPath;
             });
+
+            if (isSave)
+            {
+                string hostName = e.WebSession.Request.Host.Replace(":", "_Port").Replace(".", "_");
+                string fileNameHeader = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_H_RES_{2}.log",
+                    savePath, DateTime.Now, hostName);
+                string fileNameBody = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_B_RES_{2}.log",
+                    savePath, DateTime.Now, hostName);
+                WriteToLog(fileNameHeader, e.WebSession.Response.HeaderText, e.UserData.ToString());
+                if (e.WebSession.Response.IsBodyRead && e.WebSession.Response.HasBody)
+                    WriteToLog(fileNameBody, e.WebSession.Response.Body, e.WebSession.Response.Body.Length);
+                else if (!e.WebSession.Response.HasBody)
+                    WriteToLog(fileNameBody, "Titanium.Web.Proxy: Body not exist.");
+                else if (!e.WebSession.Response.IsBodyRead)
+                    WriteToLog(fileNameBody, "Titanium.Web.Proxy: Body not read yet.");
+            }
         }
 
         private SessionListItem AddSession(SessionEventArgsBase e)
@@ -297,5 +401,98 @@ namespace Titanium.Web.Proxy.Examples.Wpf
 
             TextBoxResponse.Text = sb.ToString();
         }
+
+        private void WriteToLog(string Filename, string Comment, string url = "")
+        {
+            StreamWriter sw = null;
+            try
+            {
+                string dirPath = Path.GetDirectoryName(Filename);
+                if (!Directory.Exists(dirPath))
+                {
+                    Directory.CreateDirectory(dirPath);
+                }
+                int i = 1;
+                string newFileName = Filename;
+                
+                lock (reservedFiles)
+                {
+                    while (File.Exists(newFileName) || reservedFiles.Contains(newFileName))
+                    {
+                        newFileName = string.Format("{0}\\{1}_{2}{3}", Path.GetDirectoryName(Filename), Path.GetFileNameWithoutExtension(Filename), i++, Path.GetExtension(Filename));
+                    }
+
+                    reservedFiles.Add(newFileName);
+                }
+
+                sw = new StreamWriter(newFileName, true);
+                if (string.IsNullOrEmpty(url))
+                {
+                    sw.WriteLine(DateTime.Now + "\r\n" + Comment);
+                }
+                else
+                {
+                    sw.WriteLine(DateTime.Now + "\r\n" + url + "\r\n" + Comment);
+                }
+                
+                sw.Flush();
+                lock (reservedFiles)
+                    reservedFiles.Remove(newFileName);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+                if (sw != null)
+                {
+                    sw.Close();
+                }
+            }
+        }
+
+        private void WriteToLog(string Filename, byte[] data, int length)
+        {
+            FileStream sw = null;
+            try
+            {
+                string dirPath = Path.GetDirectoryName(Filename);
+                if (!Directory.Exists(dirPath))
+                {
+                    Directory.CreateDirectory(dirPath);
+                }
+                int i = 1;
+                string newFileName = Filename;
+                lock (reservedFiles)
+                {
+                    while (File.Exists(newFileName) || reservedFiles.Contains(newFileName))
+                    {
+                        newFileName = string.Format("{0}\\{1}_{2}{3}", Path.GetDirectoryName(Filename), Path.GetFileNameWithoutExtension(Filename), i++, Path.GetExtension(Filename));
+                    }
+                    reservedFiles.Add(newFileName);
+                }
+                    
+
+                sw = new System.IO.FileStream(newFileName, FileMode.Append);
+                sw.Write(data, 0, length);
+                sw.Flush();
+
+                lock (reservedFiles)
+                    reservedFiles.Remove(newFileName);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+                if (sw != null)
+                {
+                    sw.Close();
+                }
+            }
+        }
+
     }
 }

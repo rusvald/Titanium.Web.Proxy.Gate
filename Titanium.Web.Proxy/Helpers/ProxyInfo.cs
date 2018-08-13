@@ -7,7 +7,7 @@ using Titanium.Web.Proxy.Models;
 
 namespace Titanium.Web.Proxy.Helpers
 {
-    internal class ProxyInfo
+    public class ProxyInfo
     {
         internal ProxyInfo(bool? autoDetect, string autoConfigUrl, int? proxyEnable, string proxyServer,
             string proxyOverride)

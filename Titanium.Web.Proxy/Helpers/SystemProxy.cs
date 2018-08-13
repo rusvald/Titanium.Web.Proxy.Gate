@@ -38,7 +38,7 @@ namespace Titanium.Web.Proxy.Helpers
     ///     Manage system proxy settings
     /// </summary>
     [SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1402:FileMayOnlyContainASingleType", Justification = "Reviewed.")]
-    internal class SystemProxyManager
+    public class SystemProxyManager
     {
         private const string regKeyInternetSettings = "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings";
         private const string regAutoConfigUrl = "AutoConfigURL";
@@ -78,7 +78,7 @@ namespace Titanium.Web.Proxy.Helpers
         /// <param name="hostname"></param>
         /// <param name="port"></param>
         /// <param name="protocolType"></param>
-        internal void SetProxy(string hostname, int port, ProxyProtocolType protocolType)
+        public void SetProxy(string hostname, int port, ProxyProtocolType protocolType)
         {
             var reg = Registry.CurrentUser.OpenSubKey(regKeyInternetSettings, true);
 
@@ -186,7 +186,7 @@ namespace Titanium.Web.Proxy.Helpers
             }
         }
 
-        internal void SetProxyOverride(string proxyOverride)
+        public void SetProxyOverride(string proxyOverride)
         {
             var reg = Registry.CurrentUser.OpenSubKey(regKeyInternetSettings, true);
 
@@ -198,7 +198,7 @@ namespace Titanium.Web.Proxy.Helpers
             }
         }
 
-        internal void RestoreOriginalSettings()
+        public void RestoreOriginalSettings()
         {
             if (originalValues == null)
             {
