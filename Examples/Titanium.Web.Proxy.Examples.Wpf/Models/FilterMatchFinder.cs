@@ -18,7 +18,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf.Models
                 StringBuilder sb = new StringBuilder();
                 foreach(var k in _filters.Keys)
                 {
-                    sb.AppendLine(k);
+                    sb.AppendFormat("{0} - matches: {1}\r\n", k, _filters[k].MatchCount);
                 }
                 return sb.ToString();
             }
@@ -61,6 +61,8 @@ namespace Titanium.Web.Proxy.Examples.Wpf.Models
     {
         string[] _segments;
         int[] _matches;
+
+        public int MatchCount { get; private set; }
         public FilterModel(string s)
         {
             _segments = s.Split(new char[] { '*' });
@@ -78,7 +80,8 @@ namespace Titanium.Web.Proxy.Examples.Wpf.Models
                     continue;
 
                 _matches[i] = inString.IndexOf(_segments[i], prev);
-                prev = _matches[i] + _segments[i].Length;
+                if(_matches[i] >= 0)
+                    prev = _matches[i] + _segments[i].Length;
 
                 //String has more text after last matchet segment of filter
                 if (i + 1 >= _segments.Length && prev < inString.Length)
@@ -88,6 +91,10 @@ namespace Titanium.Web.Proxy.Examples.Wpf.Models
             {
                 if (_matches[i] < 0 && !string.IsNullOrEmpty( _segments[i]))
                     return false;
+            }
+            lock (_matches)
+            {
+                MatchCount++;
             }
             return true;
         }

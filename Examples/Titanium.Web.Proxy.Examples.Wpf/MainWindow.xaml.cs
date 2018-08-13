@@ -106,7 +106,14 @@ namespace Titanium.Web.Proxy.Examples.Wpf
 #if DEBUG
             SaveTrafficDataPath = Path.Combine( Environment.CurrentDirectory, "Temp");
 #else
-            SaveTrafficDataPath = Path.Combine("h:\\Temp", "TitaniumWebProxy");
+            if (string.IsNullOrEmpty(Properties.Settings.Default.SaveDataPath))
+            {
+                SaveTrafficDataPath = Path.Combine("h:\\Temp", "TitaniumWebProxy");
+            }
+            else
+            {
+                SaveTrafficDataPath = Properties.Settings.Default.SaveDataPath;
+            }
 #endif
             FilterSettingsFile = "filter.config";
 
@@ -163,6 +170,8 @@ namespace Titanium.Web.Proxy.Examples.Wpf
             bool isSave = false;
             string savePath = string.Empty;
             string hostname = e.WebSession.Request.RequestUri.Host;
+            bool terminateSession = false;
+            bool filterTraffic = false;
             //if (hostname.EndsWith("webex.com"))
             //{
             //    e.DecryptSsl = false;
@@ -170,30 +179,51 @@ namespace Titanium.Web.Proxy.Examples.Wpf
 
             await Dispatcher.InvokeAsync(() => {
                 AddSession(e);
+
                 isSave = SaveTrafficDataToFile;
                 savePath = SaveTrafficDataPath;
+                filterTraffic = FilterTrafficBySettings;
             });
-            
 
-            //if (isSave)
-            //{
-            //    string hostName = e.WebSession.Request.Host.Replace(":", "_Port").Replace(".", "_");
-            //    string fileNameHeader = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_H_REQ_{2}.log",
-            //        savePath, DateTime.Now, hostName);
-            //    string fileNameBody = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_B_REQ_{2}.log",
-            //        savePath, DateTime.Now, hostName);
-            //    WriteToLog(fileNameHeader, e.WebSession.Request.HeaderText);
-            //    if (e.WebSession.Request.IsBodyRead && e.WebSession.Request.HasBody)
-            //        WriteToLog(fileNameBody, e.WebSession.Request.Body, e.WebSession.Request.Body.Length);
-            //    else if (!e.WebSession.Request.HasBody)
-            //        WriteToLog(fileNameBody, "Titanium.Web.Proxy: Body not exist.");
-            //    else if (!e.WebSession.Request.IsBodyRead)
-            //        WriteToLog(fileNameBody, "Titanium.Web.Proxy: Body not read yet.");
-            //}
+            Models.MatchResult mresult = _filterMatchFinder.HasMatches(e.WebSession.Request.Url);
+            if (mresult.IsMatch && filterTraffic)
+            {
+                e.TerminateSession();
+                terminateSession = true;
+            }
+            if (isSave)
+            {
+                string hostName = e.WebSession.Request.Host.Replace(":", "_Port").Replace(".", "_");
+                string fileNameHeader = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_H_TREQ_{2}.log",
+                    savePath, DateTime.Now, hostName);
+                string fileNameBody = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_B_TREQ_{2}.log",
+                    savePath, DateTime.Now, hostName);
+
+                if (terminateSession)
+                {
+                    WriteToLog(fileNameHeader, e.WebSession.Request.HeaderText, string.Format("Willbe termineted by {0}", mresult.MatchedWildCard));
+                }
+                else
+                {
+                    WriteToLog(fileNameHeader, e.WebSession.Request.HeaderText);
+                }
+
+                e.UserData = terminateSession ? (object)mresult : e.WebSession.Request.HeaderText;
+
+                if (e.WebSession.Request.IsBodyRead && e.WebSession.Request.HasBody)
+                    WriteToLog(fileNameBody, e.WebSession.Request.Body, e.WebSession.Request.Body.Length);
+                else if (!e.WebSession.Request.HasBody)
+                    WriteToLog(fileNameBody, "Titanium.Web.Proxy: Body not exist.");
+                else if (!e.WebSession.Request.IsBodyRead)
+                    WriteToLog(fileNameBody, "Titanium.Web.Proxy: Body not read yet.");
+            }
         }
 
         private async Task ProxyServer_BeforeTunnelConnectResponse(object sender, TunnelConnectSessionEventArgs e)
         {
+            bool isSave = false;
+            string savePath = string.Empty;
+
             await Dispatcher.InvokeAsync(() =>
             {
                 SessionListItem item;
@@ -201,9 +231,41 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                 {
                     item.Update();
                 }
+
+
+                isSave = SaveTrafficDataToFile;
+                savePath = SaveTrafficDataPath;
             });
 
-            
+            if (isSave)
+            {
+                string hostName = e.WebSession.Request.Host.Replace(":", "_Port").Replace(".", "_");
+                string fileNameHeader = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_H_TRES_{2}.log",
+                    savePath, DateTime.Now, hostName);
+                string fileNameBody = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_B_TRES_{2}.log",
+                    savePath, DateTime.Now, hostName);
+
+                if (e.UserData is Models.MatchResult)
+                {
+                    Models.MatchResult res = e.UserData as Models.MatchResult;
+                    WriteToLog(
+                        fileNameHeader,
+                        e.WebSession.Response.HeaderText,
+                        string.Format("Session Terminated. By wildcard {0}. Url {1}", res.MatchedWildCard, res.ProcessingString));
+                }
+                else
+                {
+                    WriteToLog(fileNameHeader, e.WebSession.Response.HeaderText, e.UserData.ToString());
+                }
+
+
+                if (e.WebSession.Response.IsBodyRead && e.WebSession.Response.HasBody)
+                    WriteToLog(fileNameBody, e.WebSession.Response.Body, e.WebSession.Response.Body.Length);
+                else if (!e.WebSession.Response.HasBody)
+                    WriteToLog(fileNameBody, "Titanium.Web.Proxy: Body not exist.");
+                else if (!e.WebSession.Response.IsBodyRead)
+                    WriteToLog(fileNameBody, "Titanium.Web.Proxy: Body not read yet.");
+            }
         }
 
         private async Task ProxyServer_BeforeRequest(object sender, SessionEventArgs e)
@@ -216,6 +278,9 @@ namespace Titanium.Web.Proxy.Examples.Wpf
             SessionListItem item = null;
             await Dispatcher.InvokeAsync(() => {
                 item = AddSession(e);
+
+
+
                 isSave = SaveTrafficDataToFile;
                 savePath = SaveTrafficDataPath;
                 filterTraffic = FilterTrafficBySettings;
@@ -539,6 +604,25 @@ namespace Titanium.Web.Proxy.Examples.Wpf
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            tbFilters.Text = _filterMatchFinder.FiltersInfo;
+        }
+
+        private void Button_Click_1(object sender, RoutedEventArgs e)
+        {
+            using(System.Windows.Forms.FolderBrowserDialog fbd = new System.Windows.Forms.FolderBrowserDialog())
+            {
+                fbd.SelectedPath = SaveTrafficDataPath;
+                if(fbd.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                {
+                    SaveTrafficDataPath = fbd.SelectedPath;
+                    Properties.Settings.Default.SaveDataPath = SaveTrafficDataPath;
+                    Properties.Settings.Default.Save();
+                }
+            }
+        }
+
+        private void btnFilterRefresh_Click(object sender, RoutedEventArgs e)
         {
             tbFilters.Text = _filterMatchFinder.FiltersInfo;
         }
