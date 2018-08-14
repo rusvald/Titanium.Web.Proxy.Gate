@@ -66,6 +66,19 @@
                     </StackPanel>
                 </Grid>
             </TabItem>
+            <TabItem Header="No decrypt SSL">
+                <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    <Grid.RowDefinitions>
+                        <RowDefinition />
+                        <RowDefinition Height="48" />
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+                    <TextBox Name="tbNodecryptSSL" Grid.Row="0" IsReadOnly="True" Text="" />
+                    <StackPanel Grid.Row="1" Orientation="Horizontal">
+                        <Button Name="btnNodecryptSSLRefresh" Content="Refresh" MaxHeight="32" Click="btnNodecryptSSLRefresh_Click"></Button>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
         </TabControl>
         <StackPanel Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="3" Orientation="Horizontal">
             <TextBlock Text="ClientConnectionCount:" />

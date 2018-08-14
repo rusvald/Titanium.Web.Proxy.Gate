@@ -112,6 +112,10 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <None Include="NodecryptSSL.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <SubType>Designer</SubType>
+    </None>
     <None Include="filter.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

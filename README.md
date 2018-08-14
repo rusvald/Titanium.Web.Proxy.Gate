@@ -1,6 +1,8 @@
-## Titanium Web Proxy
+## Titanium Web Proxy Gate
 
-A light weight HTTP(S) proxy server written in C#
+A light weight HTTP(S) proxy server written in C# with url filtering
+
+### Base project info (Titanium Web Proxy)
 
 <a href="https://ci.appveyor.com/project/justcoding121/titanium-web-proxy">![Build Status](https://ci.appveyor.com/api/projects/status/rvlxv8xgj0m7lkr4?svg=true)</a> [![Join the chat at https://gitter.im/Titanium-Web-Proxy/Lobby](https://badges.gitter.im/Titanium-Web-Proxy/Lobby.svg)](https://gitter.im/Titanium-Web-Proxy/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 

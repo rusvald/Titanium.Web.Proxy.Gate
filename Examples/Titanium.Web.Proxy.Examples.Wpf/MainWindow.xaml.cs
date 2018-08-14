@@ -45,6 +45,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
 
         private List<string> reservedFiles = new List<string>();
         Models.FilterMatchFinder _filterMatchFinder;
+        Models.FilterMatchFinder _nodecryptSSLMatchFinder;
 
         public MainWindow()
         {
@@ -116,8 +117,10 @@ namespace Titanium.Web.Proxy.Examples.Wpf
             }
 #endif
             FilterSettingsFile = "filter.config";
+            NodecryptSSLSettingsFile = "NodecryptSSL.config";
 
             _filterMatchFinder = new Models.FilterMatchFinder(FilterSettingsFile);
+            _nodecryptSSLMatchFinder = new Models.FilterMatchFinder(NodecryptSSLSettingsFile);
 
             InitializeComponent();
         }
@@ -139,6 +142,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
             set { SetValue(FilterTrafficBySettingsProperty, value); }
         }
         public string FilterSettingsFile { get; set; }
+        public string NodecryptSSLSettingsFile { get; set; }
 
         public SessionListItem SelectedSession
         {
@@ -172,10 +176,12 @@ namespace Titanium.Web.Proxy.Examples.Wpf
             string hostname = e.WebSession.Request.RequestUri.Host;
             bool terminateSession = false;
             bool filterTraffic = false;
-            //if (hostname.EndsWith("webex.com"))
-            //{
-            //    e.DecryptSsl = false;
-            //}
+
+            var matchres = _nodecryptSSLMatchFinder.HasMatches(e.WebSession.Request.RequestUri.AbsoluteUri);
+            if (matchres.IsMatch)
+            {
+                e.DecryptSsl = false;
+            }
 
             await Dispatcher.InvokeAsync(() => {
                 AddSession(e);
@@ -598,14 +604,19 @@ namespace Titanium.Web.Proxy.Examples.Wpf
         {
             var oldCur = Cursor;
             Cursor = Cursors.Wait;
+
             _filterMatchFinder = new Models.FilterMatchFinder(FilterSettingsFile);
             tbFilters.Text = _filterMatchFinder.FiltersInfo;
+            _nodecryptSSLMatchFinder = new Models.FilterMatchFinder(NodecryptSSLSettingsFile);
+            tbNodecryptSSL.Text = _nodecryptSSLMatchFinder.FiltersInfo;
+
             Cursor = oldCur;
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             tbFilters.Text = _filterMatchFinder.FiltersInfo;
+            this.Title = string.Format("{0} (ver. {1})", System.Windows.Forms.Application.ProductName, System.Windows.Forms.Application.ProductVersion);
         }
 
         private void Button_Click_1(object sender, RoutedEventArgs e)
@@ -625,6 +636,11 @@ namespace Titanium.Web.Proxy.Examples.Wpf
         private void btnFilterRefresh_Click(object sender, RoutedEventArgs e)
         {
             tbFilters.Text = _filterMatchFinder.FiltersInfo;
+        }
+
+        private void btnNodecryptSSLRefresh_Click(object sender, RoutedEventArgs e)
+        {
+            tbNodecryptSSL.Text = _nodecryptSSLMatchFinder.FiltersInfo;
         }
     }
 }
