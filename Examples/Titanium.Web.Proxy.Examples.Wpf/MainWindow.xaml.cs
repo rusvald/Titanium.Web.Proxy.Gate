@@ -49,6 +49,30 @@ namespace Titanium.Web.Proxy.Examples.Wpf
 
         public MainWindow()
         {
+#if DEBUG
+            SaveTrafficDataPath = Path.Combine(Environment.CurrentDirectory, "Temp");
+#else
+            if (string.IsNullOrEmpty(Properties.Settings.Default.SaveDataPath))
+            {
+                SaveTrafficDataPath = Path.Combine("h:\\Temp", "TitaniumWebProxy");
+            }
+            else
+            {
+                SaveTrafficDataPath = Properties.Settings.Default.SaveDataPath;
+            }
+#endif
+            FilterSettingsFile = "filter.config";
+            NodecryptSSLSettingsFile = "NodecryptSSL.config";
+
+            _filterMatchFinder = new Models.FilterMatchFinder(FilterSettingsFile);
+            _nodecryptSSLMatchFinder = new Models.FilterMatchFinder(NodecryptSSLSettingsFile);
+
+#region TEST
+            string testUrl = "http://www.youtube.com:443";
+            var res = _nodecryptSSLMatchFinder.HasMatches(testUrl);
+#endregion TEST
+
+
             proxyServer = new ProxyServer();
             //proxyServer.CertificateManager.CertificateEngine = CertificateEngine.DefaultWindows;
 
@@ -104,23 +128,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
 
             proxyServer.SetAsSystemProxy(explicitEndPoint, ProxyProtocolType.AllHttp);
 
-#if DEBUG
-            SaveTrafficDataPath = Path.Combine( Environment.CurrentDirectory, "Temp");
-#else
-            if (string.IsNullOrEmpty(Properties.Settings.Default.SaveDataPath))
-            {
-                SaveTrafficDataPath = Path.Combine("h:\\Temp", "TitaniumWebProxy");
-            }
-            else
-            {
-                SaveTrafficDataPath = Properties.Settings.Default.SaveDataPath;
-            }
-#endif
-            FilterSettingsFile = "filter.config";
-            NodecryptSSLSettingsFile = "NodecryptSSL.config";
 
-            _filterMatchFinder = new Models.FilterMatchFinder(FilterSettingsFile);
-            _nodecryptSSLMatchFinder = new Models.FilterMatchFinder(NodecryptSSLSettingsFile);
 
             InitializeComponent();
         }
@@ -419,7 +427,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                 IsTunnelConnect = isTunnelConnect
             };
 
-            if (isTunnelConnect || e.WebSession.Request.UpgradeToWebSocket)
+            if (!isTunnelConnect || e.WebSession.Request.UpgradeToWebSocket)
             {
                 e.DataReceived += (sender, args) =>
                 {
@@ -616,6 +624,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             tbFilters.Text = _filterMatchFinder.FiltersInfo;
+            tbNodecryptSSL.Text = _nodecryptSSLMatchFinder.FiltersInfo;
             this.Title = string.Format("{0} (ver. {1})", System.Windows.Forms.Application.ProductName, System.Windows.Forms.Application.ProductVersion);
         }
 

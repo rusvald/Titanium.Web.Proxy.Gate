@@ -46,9 +46,11 @@ namespace Titanium.Web.Proxy.Examples.Wpf.Models
 
         public MatchResult HasMatches(string inString)
         {
+            string src = inString.ToLowerInvariant();
+
             foreach(var k in _filters.Keys)
             {
-                if (_filters[k].IsMatch(inString))
+                if (_filters[k].IsMatch(src))
                 {
                     return new MatchResult(inString, k, true);
                 }
@@ -89,8 +91,18 @@ namespace Titanium.Web.Proxy.Examples.Wpf.Models
             }
             for (int i = 0; i < _segments.Length; i++)
             {
-                if (_matches[i] < 0 && !string.IsNullOrEmpty( _segments[i]))
+                if (_matches[i] < 0 && !string.IsNullOrEmpty(_segments[i]))
                     return false;
+
+                if (i == 0)
+                {
+                    if (!string.IsNullOrEmpty(_segments[i]) && _matches[i] != 0)
+                        return false;
+                }
+                if(i == _segments.Length - 1)
+                {
+                    if (!string.IsNullOrEmpty(_segments[i]) && _matches[i] + _segments[i].Length < inString.Length) return false;
+                }
             }
             lock (_matches)
             {
