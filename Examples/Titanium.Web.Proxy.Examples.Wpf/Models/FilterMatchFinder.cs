@@ -10,6 +10,20 @@ namespace Titanium.Web.Proxy.Examples.Wpf.Models
     class FilterMatchFinder
     {
         Dictionary<string, FilterModel> _filters;
+        List<string> _notMatchedStrings;
+
+        public IReadOnlyCollection<string> NotMatchedStrings
+        {
+            get
+            {
+                List<string> res = new List<string>();
+                lock (_notMatchedStrings)
+                {
+                    res.AddRange(_notMatchedStrings);
+                }
+                return res;
+            }
+        }
 
         public string FiltersInfo
         {
@@ -19,6 +33,12 @@ namespace Titanium.Web.Proxy.Examples.Wpf.Models
                 foreach(var k in _filters.Keys)
                 {
                     sb.AppendFormat("{0} - matches: {1}\r\n", k, _filters[k].MatchCount);
+                }
+
+                sb.AppendLine("\r\nHas no matchings:");
+                foreach (var i in NotMatchedStrings.Distinct().OrderBy((s) => s))
+                {
+                    sb.AppendLine(i);
                 }
                 return sb.ToString();
             }
@@ -42,6 +62,8 @@ namespace Titanium.Web.Proxy.Examples.Wpf.Models
                 }
                 
             }
+
+            _notMatchedStrings = new List<string>();
         }
 
         public MatchResult HasMatches(string inString)
@@ -55,7 +77,16 @@ namespace Titanium.Web.Proxy.Examples.Wpf.Models
                     return new MatchResult(inString, k, true);
                 }
             }
+            AddNotMatched(src);
             return new MatchResult(inString, null, false);
+        }
+
+        public void AddNotMatched(string inString)
+        {
+            lock (_notMatchedStrings)
+            {
+                _notMatchedStrings.Add(inString);
+            }
         }
     }
 
@@ -85,22 +116,25 @@ namespace Titanium.Web.Proxy.Examples.Wpf.Models
                 if(_matches[i] >= 0)
                     prev = _matches[i] + _segments[i].Length;
 
-                //String has more text after last matchet segment of filter
+                //String has more text after last matchet segment of filter with word
                 if (i + 1 >= _segments.Length && prev < inString.Length)
                     return false;
             }
             for (int i = 0; i < _segments.Length; i++)
             {
+                //one of segments not have match
                 if (_matches[i] < 0 && !string.IsNullOrEmpty(_segments[i]))
                     return false;
 
                 if (i == 0)
                 {
+                    //First word segment not start from begin
                     if (!string.IsNullOrEmpty(_segments[i]) && _matches[i] != 0)
                         return false;
                 }
                 if(i == _segments.Length - 1)
                 {
+                    //Last word segments is not in end
                     if (!string.IsNullOrEmpty(_segments[i]) && _matches[i] + _segments[i].Length < inString.Length) return false;
                 }
             }

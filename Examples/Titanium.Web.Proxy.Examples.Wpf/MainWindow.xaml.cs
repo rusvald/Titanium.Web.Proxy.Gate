@@ -32,6 +32,9 @@ namespace Titanium.Web.Proxy.Examples.Wpf
         public static readonly DependencyProperty SaveTrafficDataPathProperty = DependencyProperty.Register(
             nameof(SaveTrafficDataPath), typeof(string), typeof(MainWindow), new PropertyMetadata(default(string)));
 
+        public static readonly DependencyProperty SaveByFilterProperty = DependencyProperty.Register(
+            nameof(SaveByFilter), typeof(bool), typeof(MainWindow), new PropertyMetadata(default(bool)));
+
         public static readonly DependencyProperty FilterTrafficBySettingsProperty = DependencyProperty.Register(
             nameof(FilterTrafficBySettings), typeof(bool), typeof(MainWindow), new PropertyMetadata(default(bool)));
 
@@ -46,6 +49,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
         private List<string> reservedFiles = new List<string>();
         Models.FilterMatchFinder _filterMatchFinder;
         Models.FilterMatchFinder _nodecryptSSLMatchFinder;
+        Models.FilterMatchFinder _saveFilterMatchFinder;
 
         public MainWindow()
         {
@@ -63,14 +67,31 @@ namespace Titanium.Web.Proxy.Examples.Wpf
 #endif
             FilterSettingsFile = "filter.config";
             NodecryptSSLSettingsFile = "NodecryptSSL.config";
+            SaveFilterSettingsFile = "save_filter.config";
 
             _filterMatchFinder = new Models.FilterMatchFinder(FilterSettingsFile);
             _nodecryptSSLMatchFinder = new Models.FilterMatchFinder(NodecryptSSLSettingsFile);
+            _saveFilterMatchFinder = new Models.FilterMatchFinder(SaveFilterSettingsFile);
 
-#region TEST
+
+            #region TEST
+
             string testUrl = "http://www.youtube.com:443";
             var res = _nodecryptSSLMatchFinder.HasMatches(testUrl);
-#endregion TEST
+
+            testUrl = "http://www.youtube.com:443/";
+            res = _nodecryptSSLMatchFinder.HasMatches(testUrl);
+
+            testUrl = "https://www.youtube.com:443/";
+            res = _nodecryptSSLMatchFinder.HasMatches(testUrl);
+
+            testUrl = "www.youtube.com:443";
+            res = _nodecryptSSLMatchFinder.HasMatches(testUrl);
+
+            #endregion TEST
+
+            _nodecryptSSLMatchFinder = new Models.FilterMatchFinder(NodecryptSSLSettingsFile);
+
 
 
             proxyServer = new ProxyServer();
@@ -144,6 +165,12 @@ namespace Titanium.Web.Proxy.Examples.Wpf
             get { return (string)GetValue(SaveTrafficDataPathProperty); }
             set { SetValue(SaveTrafficDataPathProperty, value); }
         }
+
+        public bool SaveByFilter
+        {
+            get { return (bool)GetValue(SaveByFilterProperty); }
+            set { SetValue(SaveByFilterProperty, value); }
+        }
         public bool FilterTrafficBySettings
         {
             get { return (bool)GetValue(FilterTrafficBySettingsProperty); }
@@ -151,6 +178,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
         }
         public string FilterSettingsFile { get; set; }
         public string NodecryptSSLSettingsFile { get; set; }
+        public string SaveFilterSettingsFile { get; set; }
 
         public SessionListItem SelectedSession
         {
@@ -180,6 +208,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
         private async Task ProxyServer_BeforeTunnelConnectRequest(object sender, TunnelConnectSessionEventArgs e)
         {
             bool isSave = false;
+            bool isSaveByFilter = false;
             string savePath = string.Empty;
             string hostname = e.WebSession.Request.RequestUri.Host;
             bool terminateSession = false;
@@ -195,6 +224,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                 AddSession(e);
 
                 isSave = SaveTrafficDataToFile;
+                isSaveByFilter = SaveByFilter;
                 savePath = SaveTrafficDataPath;
                 filterTraffic = FilterTrafficBySettings;
             });
@@ -205,7 +235,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                 e.TerminateSession();
                 terminateSession = true;
             }
-            if (isSave)
+            if (isSave && (!isSaveByFilter || (isSaveByFilter && _saveFilterMatchFinder.HasMatches(e.WebSession.Request.Url).IsMatch)))
             {
                 string hostName = e.WebSession.Request.Host.Replace(":", "_Port").Replace(".", "_");
                 string fileNameHeader = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_H_TREQ_{2}.log",
@@ -236,6 +266,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
         private async Task ProxyServer_BeforeTunnelConnectResponse(object sender, TunnelConnectSessionEventArgs e)
         {
             bool isSave = false;
+            bool isSaveByFilter = false;
             string savePath = string.Empty;
 
             await Dispatcher.InvokeAsync(() =>
@@ -248,10 +279,11 @@ namespace Titanium.Web.Proxy.Examples.Wpf
 
 
                 isSave = SaveTrafficDataToFile;
+                isSaveByFilter = SaveByFilter;
                 savePath = SaveTrafficDataPath;
             });
 
-            if (isSave)
+            if (isSave && (!isSaveByFilter || (isSaveByFilter && _saveFilterMatchFinder.HasMatches(e.WebSession.Request.Url).IsMatch)))
             {
                 string hostName = e.WebSession.Request.Host.Replace(":", "_Port").Replace(".", "_");
                 string fileNameHeader = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_H_TRES_{2}.log",
@@ -285,6 +317,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
         private async Task ProxyServer_BeforeRequest(object sender, SessionEventArgs e)
         {
             bool isSave = false;
+            bool isSaveByFilter = false;
             string savePath = string.Empty;
             bool terminateSession = false;
             bool filterTraffic = false;
@@ -296,6 +329,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
 
 
                 isSave = SaveTrafficDataToFile;
+                isSaveByFilter = SaveByFilter;
                 savePath = SaveTrafficDataPath;
                 filterTraffic = FilterTrafficBySettings;
             });
@@ -312,7 +346,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                 e.TerminateSession();
                 terminateSession = true;
             }
-            if (isSave)
+            if (isSave && (!isSaveByFilter || (isSaveByFilter && _saveFilterMatchFinder.HasMatches(e.WebSession.Request.Url).IsMatch)))
             {
                 string hostName = e.WebSession.Request.Host.Replace(":", "_Port").Replace(".", "_");
                 string fileNameHeader = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_H_REQ_{2}.log",
@@ -365,6 +399,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
         private async Task ProxyServer_AfterResponse(object sender, SessionEventArgs e)
         {
             bool isSave = false;
+            bool isSaveByFilter = false;
             string savePath = string.Empty;
             await Dispatcher.InvokeAsync(() =>
             {
@@ -374,10 +409,11 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                     item.Exception = e.Exception;
                 }
                 isSave = SaveTrafficDataToFile;
+                isSaveByFilter = SaveByFilter;
                 savePath = SaveTrafficDataPath;
             });
 
-            if (isSave)
+            if (isSave && (!isSaveByFilter || (isSaveByFilter && _saveFilterMatchFinder.HasMatches(e.WebSession.Request.Url).IsMatch)))
             {
                 string hostName = e.WebSession.Request.Host.Replace(":", "_Port").Replace(".", "_");
                 string fileNameHeader = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_H_RES_{2}.log",
@@ -625,6 +661,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
         {
             tbFilters.Text = _filterMatchFinder.FiltersInfo;
             tbNodecryptSSL.Text = _nodecryptSSLMatchFinder.FiltersInfo;
+            tbSaveFilter.Text = _saveFilterMatchFinder.FiltersInfo;
             this.Title = string.Format("{0} (ver. {1})", System.Windows.Forms.Application.ProductName, System.Windows.Forms.Application.ProductVersion);
         }
 
@@ -650,6 +687,11 @@ namespace Titanium.Web.Proxy.Examples.Wpf
         private void btnNodecryptSSLRefresh_Click(object sender, RoutedEventArgs e)
         {
             tbNodecryptSSL.Text = _nodecryptSSLMatchFinder.FiltersInfo;
+        }
+
+        private void btnSaveFilterRefresh_Click(object sender, RoutedEventArgs e)
+        {
+            tbSaveFilter.Text = _saveFilterMatchFinder.FiltersInfo;
         }
     }
 }

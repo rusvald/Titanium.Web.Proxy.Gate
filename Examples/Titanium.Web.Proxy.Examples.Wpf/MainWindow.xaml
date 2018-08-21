@@ -22,6 +22,7 @@
             <CheckBox IsChecked="{Binding SaveTrafficDataToFile}" Content="Save data to file" VerticalAlignment="Center"></CheckBox>
             <TextBox Text="{Binding SaveTrafficDataPath}" IsReadOnly="True" MinWidth="256" MinHeight="32" Margin="20 0 0 0"></TextBox>
             <Button Content="Browse..." Margin="4 4 4 4" Padding="8 0 8 0" Click="Button_Click_1"></Button>
+            <CheckBox IsChecked="{Binding SaveByFilter}" Content="Save by filter" Margin="4 0 0 0" VerticalAlignment="Center"></CheckBox>
             <CheckBox IsChecked="{Binding FilterTrafficBySettings}" Content="Filter traffic"  Margin="20 0 0 0" VerticalAlignment="Center"></CheckBox>
             <Button Content="Reload Filters" Margin="10 4 4 4" Padding="8 0 8 0" Click="Button_Click"></Button>
         </StackPanel>
@@ -58,9 +59,8 @@
                     <Grid.RowDefinitions>
                         <RowDefinition />
                         <RowDefinition Height="48" />
-                        <RowDefinition />
                     </Grid.RowDefinitions>
-                    <TextBox Name="tbFilters" Grid.Row="0" IsReadOnly="True" Text="" />
+                    <TextBox Name="tbFilters" Grid.Row="0" IsReadOnly="True" Text="" ScrollViewer.VerticalScrollBarVisibility="Visible" />
                     <StackPanel Grid.Row="1" Orientation="Horizontal">
                         <Button Name="btnFilterRefresh" Content="Refresh" MaxHeight="32" Click="btnFilterRefresh_Click"></Button>
                     </StackPanel>
@@ -71,11 +71,22 @@
                     <Grid.RowDefinitions>
                         <RowDefinition />
                         <RowDefinition Height="48" />
-                        <RowDefinition />
                     </Grid.RowDefinitions>
-                    <TextBox Name="tbNodecryptSSL" Grid.Row="0" IsReadOnly="True" Text="" />
+                    <TextBox Name="tbNodecryptSSL" Grid.Row="0" IsReadOnly="True" Text="" ScrollViewer.VerticalScrollBarVisibility="Visible" />
                     <StackPanel Grid.Row="1" Orientation="Horizontal">
                         <Button Name="btnNodecryptSSLRefresh" Content="Refresh" MaxHeight="32" Click="btnNodecryptSSLRefresh_Click"></Button>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+            <TabItem Header="Save filter">
+                <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    <Grid.RowDefinitions>
+                        <RowDefinition />
+                        <RowDefinition Height="48" />
+                    </Grid.RowDefinitions>
+                    <TextBox Name="tbSaveFilter" Grid.Row="0" IsReadOnly="True" Text="" ScrollViewer.VerticalScrollBarVisibility="Visible" />
+                    <StackPanel Grid.Row="1" Orientation="Horizontal">
+                        <Button Name="btnSaveFilterRefresh" Content="Refresh" MaxHeight="32" Click="btnSaveFilterRefresh_Click"></Button>
                     </StackPanel>
                 </Grid>
             </TabItem>
