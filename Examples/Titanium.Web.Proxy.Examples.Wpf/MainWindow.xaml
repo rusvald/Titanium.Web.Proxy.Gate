@@ -23,8 +23,9 @@
             <TextBox Text="{Binding SaveTrafficDataPath}" IsReadOnly="True" MinWidth="256" MinHeight="32" Margin="20 0 0 0"></TextBox>
             <Button Content="Browse..." Margin="4 4 4 4" Padding="8 0 8 0" Click="Button_Click_1"></Button>
             <CheckBox IsChecked="{Binding SaveByFilter}" Content="Save by filter" Margin="4 0 0 0" VerticalAlignment="Center"></CheckBox>
+            
             <CheckBox IsChecked="{Binding FilterTrafficBySettings}" Content="Filter traffic"  Margin="20 0 0 0" VerticalAlignment="Center"></CheckBox>
-            <Button Content="Reload Filters" Margin="10 4 4 4" Padding="8 0 8 0" Click="Button_Click"></Button>
+            <Button Content="Reload Filters" Margin="10 4 4 4" Padding="8 0 8 0" Click="ButtonReloadFilters_Click"></Button>
         </StackPanel>
         <GridSplitter Grid.Column="1" Grid.Row="1" HorizontalAlignment="Stretch" />
         <ListView Grid.Column="0" Grid.Row="1" HorizontalAlignment="Stretch" ItemsSource="{Binding Sessions}"
@@ -63,6 +64,10 @@
                     <TextBox Name="tbFilters" Grid.Row="0" IsReadOnly="True" Text="" ScrollViewer.VerticalScrollBarVisibility="Visible" />
                     <StackPanel Grid.Row="1" Orientation="Horizontal">
                         <Button Name="btnFilterRefresh" Content="Refresh" MaxHeight="32" Click="btnFilterRefresh_Click"></Button>
+                        <StackPanel VerticalAlignment="Center" Margin="8">
+                            <RadioButton Name="rbtFiltersInclusive" GroupName="BlockByFilter" Content="Inclusive mode (Block request only matched by filter)" Checked="rbtFiltersInclusive_Checked"></RadioButton>
+                            <RadioButton Name="rbtFiltersExclusive" GroupName="BlockByFilter" Content="Exclusive mode (Block any request has no match by filter)" Checked="rbtFiltersInclusive_Checked"></RadioButton>
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
             </TabItem>
@@ -75,6 +80,10 @@
                     <TextBox Name="tbNodecryptSSL" Grid.Row="0" IsReadOnly="True" Text="" ScrollViewer.VerticalScrollBarVisibility="Visible" />
                     <StackPanel Grid.Row="1" Orientation="Horizontal">
                         <Button Name="btnNodecryptSSLRefresh" Content="Refresh" MaxHeight="32" Click="btnNodecryptSSLRefresh_Click"></Button>
+                        <StackPanel VerticalAlignment="Center" Margin="8">
+                            <RadioButton Name="rbtNoDecryptInclusive" GroupName="NoDecryptFilter" Content="Inclusive mode (Do not decrypt request only if match by filter)" Checked="rbtFiltersInclusive_Checked"></RadioButton>
+                            <RadioButton Name="rbtNoDecryptExclusive" GroupName="NoDecryptFilter" Content="Exclusive mode (Do not decrypt request if no has match with filter)" Checked="rbtFiltersInclusive_Checked"></RadioButton>
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
             </TabItem>
@@ -87,6 +96,10 @@
                     <TextBox Name="tbSaveFilter" Grid.Row="0" IsReadOnly="True" Text="" ScrollViewer.VerticalScrollBarVisibility="Visible" />
                     <StackPanel Grid.Row="1" Orientation="Horizontal">
                         <Button Name="btnSaveFilterRefresh" Content="Refresh" MaxHeight="32" Click="btnSaveFilterRefresh_Click"></Button>
+                        <StackPanel VerticalAlignment="Center" Margin="8">
+                            <RadioButton Name="rbtSaveByFilterInclusive" GroupName="SaveByFilter" Content="Inclusive mode (Save only matched by filter requests)" Checked="rbtFiltersInclusive_Checked"></RadioButton>
+                            <RadioButton Name="rbtSaveByFilterExclusive" GroupName="SaveByFilter" Content="Exclusive mode (Save any request with no match by filter)" Checked="rbtFiltersInclusive_Checked"></RadioButton>
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
             </TabItem>

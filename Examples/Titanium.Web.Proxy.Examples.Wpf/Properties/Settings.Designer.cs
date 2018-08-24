@@ -34,5 +34,41 @@ namespace Titanium.Web.Proxy.Examples.Wpf.Properties {
                 this["SaveDataPath"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool filterMatchInclusive {
+            get {
+                return ((bool)(this["filterMatchInclusive"]));
+            }
+            set {
+                this["filterMatchInclusive"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool nodecryptSSLMatchInclusive {
+            get {
+                return ((bool)(this["nodecryptSSLMatchInclusive"]));
+            }
+            set {
+                this["nodecryptSSLMatchInclusive"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool saveMatchInclusive {
+            get {
+                return ((bool)(this["saveMatchInclusive"]));
+            }
+            set {
+                this["saveMatchInclusive"] = value;
+            }
+        }
     }
 }

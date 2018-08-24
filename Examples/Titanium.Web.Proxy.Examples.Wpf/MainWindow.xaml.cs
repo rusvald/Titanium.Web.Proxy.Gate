@@ -47,9 +47,15 @@ namespace Titanium.Web.Proxy.Examples.Wpf
         private SessionListItem selectedSession;
 
         private List<string> reservedFiles = new List<string>();
+        bool _filterMatchInclusive = true;
+        bool _nodecryptSSLMatchInclusive = true;
+        bool _saveMatchInclusive = true;
         Models.FilterMatchFinder _filterMatchFinder;
         Models.FilterMatchFinder _nodecryptSSLMatchFinder;
         Models.FilterMatchFinder _saveFilterMatchFinder;
+        Models.FilterMatchFinder _filterMatchFinderExclusive;
+        Models.FilterMatchFinder _nodecryptSSLMatchFinderExclusive;
+        Models.FilterMatchFinder _saveFilterMatchFinderExclusive;
 
         public MainWindow()
         {
@@ -65,13 +71,25 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                 SaveTrafficDataPath = Properties.Settings.Default.SaveDataPath;
             }
 #endif
+            _filterMatchInclusive = Properties.Settings.Default.filterMatchInclusive;
+            _nodecryptSSLMatchInclusive = Properties.Settings.Default.nodecryptSSLMatchInclusive;
+            _saveMatchInclusive = Properties.Settings.Default.saveMatchInclusive;
+
             FilterSettingsFile = "filter.config";
             NodecryptSSLSettingsFile = "NodecryptSSL.config";
             SaveFilterSettingsFile = "save_filter.config";
 
+            FilterExclusiveSettingsFile = "filterExclusive.config";
+            NodecryptSSLExclusiveSettingsFile = "NodecryptSSLExclusive.config";
+            SaveFilterExclusiveSettingsFile = "save_filterExclusive.config";
+
             _filterMatchFinder = new Models.FilterMatchFinder(FilterSettingsFile);
             _nodecryptSSLMatchFinder = new Models.FilterMatchFinder(NodecryptSSLSettingsFile);
             _saveFilterMatchFinder = new Models.FilterMatchFinder(SaveFilterSettingsFile);
+
+            _filterMatchFinderExclusive = new Models.FilterMatchFinder(FilterExclusiveSettingsFile);
+            _nodecryptSSLMatchFinderExclusive = new Models.FilterMatchFinder(NodecryptSSLExclusiveSettingsFile);
+            _saveFilterMatchFinderExclusive = new Models.FilterMatchFinder(SaveFilterExclusiveSettingsFile);
 
 
             #region TEST
@@ -88,9 +106,13 @@ namespace Titanium.Web.Proxy.Examples.Wpf
             testUrl = "www.youtube.com:443";
             res = _nodecryptSSLMatchFinder.HasMatches(testUrl);
 
+            testUrl = "https://www.youtube.com/youtubei/v1/log_event?alt=json&key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
+            res = _filterMatchFinder.HasMatches(testUrl);
+
             #endregion TEST
 
             _nodecryptSSLMatchFinder = new Models.FilterMatchFinder(NodecryptSSLSettingsFile);
+            _filterMatchFinder = new Models.FilterMatchFinder(FilterSettingsFile);
 
 
 
@@ -180,6 +202,10 @@ namespace Titanium.Web.Proxy.Examples.Wpf
         public string NodecryptSSLSettingsFile { get; set; }
         public string SaveFilterSettingsFile { get; set; }
 
+        public string FilterExclusiveSettingsFile { get; set; }
+        public string NodecryptSSLExclusiveSettingsFile { get; set; }
+        public string SaveFilterExclusiveSettingsFile { get; set; }
+
         public SessionListItem SelectedSession
         {
             get { return selectedSession; }
@@ -214,11 +240,26 @@ namespace Titanium.Web.Proxy.Examples.Wpf
             bool terminateSession = false;
             bool filterTraffic = false;
 
-            var matchres = _nodecryptSSLMatchFinder.HasMatches(e.WebSession.Request.RequestUri.AbsoluteUri);
-            if (matchres.IsMatch)
+            var matchres = _nodecryptSSLMatchInclusive ?
+                _nodecryptSSLMatchFinder.HasMatches(e.WebSession.Request.RequestUri.AbsoluteUri) :
+                _nodecryptSSLMatchFinderExclusive.HasMatches(e.WebSession.Request.RequestUri.AbsoluteUri);
+            if (_nodecryptSSLMatchInclusive)
             {
-                e.DecryptSsl = false;
+                //No decrypt if matched one of the wildcard in settings
+                if (matchres.IsMatch)
+                {
+                    e.DecryptSsl = false;
+                }
             }
+            else
+            {
+                //No decrypt if no matched one of the wildcard in settings
+                if (!matchres.IsMatch)
+                {
+                    e.DecryptSsl = false;
+                }
+            }
+            
 
             await Dispatcher.InvokeAsync(() => {
                 AddSession(e);
@@ -229,14 +270,44 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                 filterTraffic = FilterTrafficBySettings;
             });
 
-            Models.MatchResult mresult = _filterMatchFinder.HasMatches(e.WebSession.Request.Url);
-            if (mresult.IsMatch && filterTraffic)
+            Models.MatchResult mresult = _filterMatchInclusive ? _filterMatchFinder.HasMatches(e.WebSession.Request.Url) : _filterMatchFinderExclusive.HasMatches(e.WebSession.Request.Url);
+            if (_filterMatchInclusive)
             {
-                e.TerminateSession();
-                terminateSession = true;
+                if (mresult.IsMatch && filterTraffic)
+                {
+                    e.TerminateSession();
+                    e.DenyConnect = true;
+                    terminateSession = true;
+                }
             }
-            if (isSave && (!isSaveByFilter || (isSaveByFilter && _saveFilterMatchFinder.HasMatches(e.WebSession.Request.Url).IsMatch)))
+            else
             {
+                if (!mresult.IsMatch && filterTraffic)
+                {
+                    e.TerminateSession();
+                    e.DenyConnect = true;
+                    terminateSession = true;
+                }
+            }
+            //Is the same?
+            //if ((mresult.IsMatch && _filterMatchInclusive || !mresult.IsMatch && !_filterMatchInclusive) && filterTraffic)
+            //{
+            //    e.TerminateSession();
+            //    terminateSession = true;
+            //}
+
+
+            var smresult = _saveMatchInclusive ?
+                _saveFilterMatchFinder.HasMatches(e.WebSession.Request.Url) :
+                _saveFilterMatchFinderExclusive.HasMatches(e.WebSession.Request.Url);
+            
+            if (isSave)
+            {
+                if (isSaveByFilter && _saveMatchInclusive && !smresult.IsMatch)
+                    return;
+                if (isSaveByFilter && !_saveMatchInclusive && smresult.IsMatch)
+                    return;
+
                 string hostName = e.WebSession.Request.Host.Replace(":", "_Port").Replace(".", "_");
                 string fileNameHeader = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_H_TREQ_{2}.log",
                     savePath, DateTime.Now, hostName);
@@ -245,7 +316,10 @@ namespace Titanium.Web.Proxy.Examples.Wpf
 
                 if (terminateSession)
                 {
-                    WriteToLog(fileNameHeader, e.WebSession.Request.HeaderText, string.Format("Willbe termineted by {0}", mresult.MatchedWildCard));
+                    if(_filterMatchInclusive)
+                        WriteToLog(fileNameHeader, e.WebSession.Request.HeaderText, string.Format("Will be termineted by {0}", mresult.MatchedWildCard));
+                    else
+                        WriteToLog(fileNameHeader, e.WebSession.Request.HeaderText, string.Format("Will be termineted by exclusive (no match any filter wildcards)"));
                 }
                 else
                 {
@@ -283,8 +357,16 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                 savePath = SaveTrafficDataPath;
             });
 
-            if (isSave && (!isSaveByFilter || (isSaveByFilter && _saveFilterMatchFinder.HasMatches(e.WebSession.Request.Url).IsMatch)))
+            var smresult = _saveMatchInclusive ?
+                _saveFilterMatchFinder.HasMatches(e.WebSession.Request.Url) :
+                _saveFilterMatchFinderExclusive.HasMatches(e.WebSession.Request.Url);
+            if (isSave)
             {
+                if (isSaveByFilter && _saveMatchInclusive && !smresult.IsMatch)
+                    return;
+                if (isSaveByFilter && !_saveMatchInclusive && smresult.IsMatch)
+                    return;
+
                 string hostName = e.WebSession.Request.Host.Replace(":", "_Port").Replace(".", "_");
                 string fileNameHeader = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_H_TRES_{2}.log",
                     savePath, DateTime.Now, hostName);
@@ -294,10 +376,20 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                 if (e.UserData is Models.MatchResult)
                 {
                     Models.MatchResult res = e.UserData as Models.MatchResult;
-                    WriteToLog(
-                        fileNameHeader,
-                        e.WebSession.Response.HeaderText,
-                        string.Format("Session Terminated. By wildcard {0}. Url {1}", res.MatchedWildCard, res.ProcessingString));
+                    if (_filterMatchInclusive)
+                    {
+                        WriteToLog(
+                          fileNameHeader,
+                          e.WebSession.Response.HeaderText,
+                          string.Format("Session Terminated. By wildcard {0}. Url {1}", res.MatchedWildCard, res.ProcessingString));
+                    }
+                    else
+                    {
+                        WriteToLog(
+                          fileNameHeader,
+                          e.WebSession.Response.HeaderText,
+                          string.Format("Session Terminated. By wildcard exclusive. Url {0}", res.ProcessingString));
+                    }
                 }
                 else
                 {
@@ -340,14 +432,37 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                 await e.GetRequestBody();
             }
 
-            Models.MatchResult mresult = _filterMatchFinder.HasMatches(e.WebSession.Request.Url);
-            if (mresult.IsMatch && filterTraffic)
+            Models.MatchResult mresult = _filterMatchInclusive ?
+                _filterMatchFinder.HasMatches(e.WebSession.Request.Url) :
+                _filterMatchFinderExclusive.HasMatches(e.WebSession.Request.Url);
+            if (_filterMatchInclusive)
             {
-                e.TerminateSession();
-                terminateSession = true;
+                if (mresult.IsMatch && filterTraffic)
+                {
+                    e.TerminateSession();
+                    terminateSession = true;
+                }
             }
-            if (isSave && (!isSaveByFilter || (isSaveByFilter && _saveFilterMatchFinder.HasMatches(e.WebSession.Request.Url).IsMatch)))
+            else
             {
+                if (!mresult.IsMatch && filterTraffic)
+                {
+                    e.TerminateSession();
+                    terminateSession = true;
+                }
+            }
+
+            var smresult = _saveMatchInclusive ?
+                _saveFilterMatchFinder.HasMatches(e.WebSession.Request.Url) :
+                _saveFilterMatchFinderExclusive.HasMatches(e.WebSession.Request.Url);
+            if (isSave)
+            {
+                if (isSaveByFilter && _saveMatchInclusive && !smresult.IsMatch)
+                    return;
+                if (isSaveByFilter && !_saveMatchInclusive && smresult.IsMatch)
+                    return;
+
+
                 string hostName = e.WebSession.Request.Host.Replace(":", "_Port").Replace(".", "_");
                 string fileNameHeader = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_H_REQ_{2}.log",
                     savePath, DateTime.Now, hostName);
@@ -356,7 +471,10 @@ namespace Titanium.Web.Proxy.Examples.Wpf
 
                 if (terminateSession)
                 {
-                    WriteToLog(fileNameHeader, e.WebSession.Request.HeaderText, string.Format( "Willbe termineted by {0}", mresult.MatchedWildCard));
+                    if(_filterMatchInclusive)
+                        WriteToLog(fileNameHeader, e.WebSession.Request.HeaderText, string.Format( "Willbe termineted by {0}", mresult.MatchedWildCard));
+                    else
+                        WriteToLog(fileNameHeader, e.WebSession.Request.HeaderText, string.Format("Will be termineted by exclusive (no match any filter wildcards)"));
                 }
                 else
                 {
@@ -413,8 +531,17 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                 savePath = SaveTrafficDataPath;
             });
 
-            if (isSave && (!isSaveByFilter || (isSaveByFilter && _saveFilterMatchFinder.HasMatches(e.WebSession.Request.Url).IsMatch)))
+            var smresult = _saveMatchInclusive ?
+                _saveFilterMatchFinder.HasMatches(e.WebSession.Request.Url) :
+                _saveFilterMatchFinderExclusive.HasMatches(e.WebSession.Request.Url);
+            if (isSave)
             {
+                if (isSaveByFilter && _saveMatchInclusive && !smresult.IsMatch)
+                    return;
+                if (isSaveByFilter && !_saveMatchInclusive && smresult.IsMatch)
+                    return;
+
+
                 string hostName = e.WebSession.Request.Host.Replace(":", "_Port").Replace(".", "_");
                 string fileNameHeader = string.Format("{0}\\{1:yyyy'-'MM'-'dd'-'HH'-'mm'-'ss'-'fff}_H_RES_{2}.log",
                     savePath, DateTime.Now, hostName);
@@ -424,10 +551,20 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                 if(e.UserData is Models.MatchResult)
                 {
                     Models.MatchResult res = e.UserData as Models.MatchResult;
-                    WriteToLog(
-                        fileNameHeader,
-                        e.WebSession.Response.HeaderText,
-                        string.Format( "Session Terminated. By wildcard {0}. Url {1}", res.MatchedWildCard, res.ProcessingString));
+                    if (_filterMatchInclusive)
+                    {
+                        WriteToLog(
+                          fileNameHeader,
+                          e.WebSession.Response.HeaderText,
+                          string.Format("Session Terminated. By wildcard {0}. Url {1}", res.MatchedWildCard, res.ProcessingString));
+                    }
+                    else
+                    {
+                        WriteToLog(
+                          fileNameHeader,
+                          e.WebSession.Response.HeaderText,
+                          string.Format("Session Terminated. By wildcard exclusive. Url {0}", res.ProcessingString));
+                    }
                 }
                 else
                 {
@@ -644,24 +781,41 @@ namespace Titanium.Web.Proxy.Examples.Wpf
             }
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        private void ButtonReloadFilters_Click(object sender, RoutedEventArgs e)
         {
             var oldCur = Cursor;
             Cursor = Cursors.Wait;
 
             _filterMatchFinder = new Models.FilterMatchFinder(FilterSettingsFile);
-            tbFilters.Text = _filterMatchFinder.FiltersInfo;
+            _filterMatchFinderExclusive = new Models.FilterMatchFinder(FilterExclusiveSettingsFile);
+            tbFilters.Text = _filterMatchInclusive ? _filterMatchFinder.FiltersInfo : _filterMatchFinderExclusive.FiltersInfo;
+
             _nodecryptSSLMatchFinder = new Models.FilterMatchFinder(NodecryptSSLSettingsFile);
-            tbNodecryptSSL.Text = _nodecryptSSLMatchFinder.FiltersInfo;
+            _nodecryptSSLMatchFinderExclusive = new Models.FilterMatchFinder(NodecryptSSLExclusiveSettingsFile);
+            tbNodecryptSSL.Text = _nodecryptSSLMatchInclusive ? _nodecryptSSLMatchFinder.FiltersInfo : _nodecryptSSLMatchFinderExclusive.FiltersInfo;
+
+            _saveFilterMatchFinder = new Models.FilterMatchFinder(SaveFilterSettingsFile);
+            _saveFilterMatchFinderExclusive = new Models.FilterMatchFinder(SaveFilterExclusiveSettingsFile);
+            tbSaveFilter.Text = _saveMatchInclusive ? _saveFilterMatchFinder.FiltersInfo : _saveFilterMatchFinderExclusive.FiltersInfo;
+
+            
+            
 
             Cursor = oldCur;
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            tbFilters.Text = _filterMatchFinder.FiltersInfo;
-            tbNodecryptSSL.Text = _nodecryptSSLMatchFinder.FiltersInfo;
-            tbSaveFilter.Text = _saveFilterMatchFinder.FiltersInfo;
+            rbtFiltersInclusive.IsChecked = _filterMatchInclusive;
+            rbtFiltersExclusive.IsChecked = !_filterMatchInclusive;
+            rbtNoDecryptInclusive.IsChecked = _nodecryptSSLMatchInclusive;
+            rbtNoDecryptExclusive.IsChecked = !_nodecryptSSLMatchInclusive;
+            rbtSaveByFilterInclusive.IsChecked = _saveMatchInclusive;
+            rbtSaveByFilterExclusive.IsChecked = !_saveMatchInclusive;
+
+            tbFilters.Text = _filterMatchInclusive ? _filterMatchFinder.FiltersInfo : _filterMatchFinderExclusive.FiltersInfo;
+            tbNodecryptSSL.Text = _nodecryptSSLMatchInclusive ? _nodecryptSSLMatchFinder.FiltersInfo : _nodecryptSSLMatchFinderExclusive.FiltersInfo;
+            tbSaveFilter.Text = _saveMatchInclusive ? _saveFilterMatchFinder.FiltersInfo : _saveFilterMatchFinderExclusive.FiltersInfo;
             this.Title = string.Format("{0} (ver. {1})", System.Windows.Forms.Application.ProductName, System.Windows.Forms.Application.ProductVersion);
         }
 
@@ -681,17 +835,58 @@ namespace Titanium.Web.Proxy.Examples.Wpf
 
         private void btnFilterRefresh_Click(object sender, RoutedEventArgs e)
         {
-            tbFilters.Text = _filterMatchFinder.FiltersInfo;
+            tbFilters.Text = _filterMatchInclusive ? _filterMatchFinder.FiltersInfo : _filterMatchFinderExclusive.FiltersInfo;
         }
 
         private void btnNodecryptSSLRefresh_Click(object sender, RoutedEventArgs e)
         {
-            tbNodecryptSSL.Text = _nodecryptSSLMatchFinder.FiltersInfo;
+            tbNodecryptSSL.Text = _nodecryptSSLMatchInclusive ? _nodecryptSSLMatchFinder.FiltersInfo : _nodecryptSSLMatchFinderExclusive.FiltersInfo;
         }
 
         private void btnSaveFilterRefresh_Click(object sender, RoutedEventArgs e)
         {
-            tbSaveFilter.Text = _saveFilterMatchFinder.FiltersInfo;
+            tbSaveFilter.Text = _saveMatchInclusive ? _saveFilterMatchFinder.FiltersInfo : _saveFilterMatchFinderExclusive.FiltersInfo;
+        }
+
+        private void rbtFiltersInclusive_Checked(object sender, RoutedEventArgs e)
+        {
+            RadioButton rb = sender as RadioButton;
+            if (rb == null) return;
+            switch (rb.Name)
+            {
+                case "rbtFiltersInclusive":
+                    Properties.Settings.Default.filterMatchInclusive = _filterMatchInclusive = true;
+                    Properties.Settings.Default.Save();
+                    tbFilters.Text = _filterMatchFinder.FiltersInfo;
+                    break;
+                case "rbtFiltersExclusive":
+                    Properties.Settings.Default.filterMatchInclusive = _filterMatchInclusive = false;
+                    Properties.Settings.Default.Save();
+                    tbFilters.Text = _filterMatchFinderExclusive.FiltersInfo;
+                    break;
+                case "rbtNoDecryptInclusive":
+                    Properties.Settings.Default.nodecryptSSLMatchInclusive = _nodecryptSSLMatchInclusive = true;
+                    Properties.Settings.Default.Save();
+                    tbNodecryptSSL.Text = _nodecryptSSLMatchFinder.FiltersInfo;
+                    break;
+                case "rbtNoDecryptExclusive":
+                    Properties.Settings.Default.nodecryptSSLMatchInclusive = _nodecryptSSLMatchInclusive = false;
+                    Properties.Settings.Default.Save();
+                    tbNodecryptSSL.Text = _nodecryptSSLMatchFinderExclusive.FiltersInfo;
+                    break;
+                case "rbtSaveByFilterInclusive":
+                    Properties.Settings.Default.saveMatchInclusive = _saveMatchInclusive = true;
+                    Properties.Settings.Default.Save();
+                    tbSaveFilter.Text = _saveFilterMatchFinder.FiltersInfo;
+                    break;
+                case "rbtSaveByFilterExclusive":
+                    Properties.Settings.Default.saveMatchInclusive = _saveMatchInclusive = false;
+                    Properties.Settings.Default.Save();
+                    tbSaveFilter.Text = _saveFilterMatchFinderExclusive.FiltersInfo;
+                    break;
+                default:
+                    break;
+            }
         }
     }
 }
