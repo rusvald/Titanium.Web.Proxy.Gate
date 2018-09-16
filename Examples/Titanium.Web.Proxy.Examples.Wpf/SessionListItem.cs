@@ -101,7 +101,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
             var response = WebSession.Response;
             int statusCode = response?.StatusCode ?? 0;
             StatusCode = statusCode == 0 ? "-" : statusCode.ToString();
-            Protocol = request.RequestUri.Scheme;
+            Protocol = string.Format( "{0}:{1}", request.RequestUri.Scheme.ToUpper(), request.Method.ToUpper() );
 
             if (IsTunnelConnect)
             {

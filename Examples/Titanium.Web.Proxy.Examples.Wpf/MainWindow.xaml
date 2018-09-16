@@ -9,7 +9,7 @@
         DataContext="{Binding RelativeSource={RelativeSource Self}}" Loaded="Window_Loaded">
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="500" />
+            <ColumnDefinition />
             <ColumnDefinition Width="3" />
             <ColumnDefinition />
         </Grid.ColumnDefinitions>
@@ -35,12 +35,12 @@
                 <GridView>
                     <GridViewColumn Header="Result" DisplayMemberBinding="{Binding StatusCode}" />
                     <GridViewColumn Header="Protocol" DisplayMemberBinding="{Binding Protocol}" />
-                    <GridViewColumn Header="Host" DisplayMemberBinding="{Binding Host}" />
+                    <GridViewColumn Header="Host" Width="100" DisplayMemberBinding="{Binding Host}" />
                     <GridViewColumn Header="Url" DisplayMemberBinding="{Binding Url}" />
                     <GridViewColumn Header="BodySize" DisplayMemberBinding="{Binding BodySize}" />
                     <GridViewColumn Header="Process" DisplayMemberBinding="{Binding Process}" />
-                    <GridViewColumn Header="SentBytes" DisplayMemberBinding="{Binding SentDataCount}" />
-                    <GridViewColumn Header="ReceivedBytes" DisplayMemberBinding="{Binding ReceivedDataCount}" />
+                    <GridViewColumn Header="SentBytes" Width="64" DisplayMemberBinding="{Binding SentDataCount}" />
+                    <GridViewColumn Header="ReceivedBytes" Width="64" DisplayMemberBinding="{Binding ReceivedDataCount}" />
                 </GridView>
             </ListView.View>
         </ListView>
@@ -51,8 +51,15 @@
                         <RowDefinition />
                         <RowDefinition />
                     </Grid.RowDefinitions>
-                    <TextBox x:Name="TextBoxRequest" Grid.Row="0" />
-                    <TextBox x:Name="TextBoxResponse" Grid.Row="1" />
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="48"></ColumnDefinition>
+                        <ColumnDefinition></ColumnDefinition>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Vertical" Grid.Column="0" Grid.RowSpan="2" Background="CornflowerBlue">
+                        <Button Name="btnClear" Content="CLEAR" Padding="0 0 0 0" Height="32" Click="btnClear_Click"></Button>
+                    </StackPanel>
+                    <TextBox x:Name="TextBoxRequest" Grid.Row="0" Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" />
+                    <TextBox x:Name="TextBoxResponse" Grid.Row="1" Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" />
                 </Grid>
             </TabItem>
             <TabItem Header="Filters">

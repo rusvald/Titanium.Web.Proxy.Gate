@@ -94,15 +94,37 @@ namespace Titanium.Web.Proxy.Examples.Wpf.Models
     {
         string[] _segments;
         int[] _matches;
+        bool _isRefularExpression = false;
 
         public int MatchCount { get; private set; }
+        public bool IsRegularExpression => _isRefularExpression;
         public FilterModel(string s)
         {
-            _segments = s.Split(new char[] { '*' });
-            _matches = new int[_segments.Length];
+            if (s.StartsWith("@"))
+            {
+                _segments = new string[1];
+                _segments[0] = s.Substring(1);
+                _isRefularExpression = true;
+                _matches = new int[1];
+            }
+            else
+            {
+                _segments = s.Split(new char[] { '*' });
+                _matches = new int[_segments.Length];
+            }
         }
-
         public bool IsMatch(string inString)
+        {
+            if (IsRegularExpression)
+            {
+                return IsMatchRegEx(inString);
+            }
+            else
+            {
+                return IsMatchNoRegEx(inString);
+            }
+        }
+        public bool IsMatchNoRegEx(string inString)
         {
             int prev = 0;
             for(int i = 0; i < _segments.Length; i++)
@@ -137,6 +159,20 @@ namespace Titanium.Web.Proxy.Examples.Wpf.Models
                     //Last word segments is not in end
                     if (!string.IsNullOrEmpty(_segments[i]) && _matches[i] + _segments[i].Length < inString.Length) return false;
                 }
+            }
+            lock (_matches)
+            {
+                MatchCount++;
+            }
+            return true;
+        }
+
+        public bool IsMatchRegEx(string inString)
+        {
+            int prev = 0;
+            if(!System.Text.RegularExpressions.Regex.IsMatch(inString, _segments[0], System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            {
+                return false;
             }
             lock (_matches)
             {

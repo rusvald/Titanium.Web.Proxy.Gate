@@ -65,6 +65,7 @@ namespace Titanium.Web.Proxy
             try
             {
                 var cancellationToken = cancellationTokenSource.Token;
+                System.Diagnostics.Debug.WriteLine("{2}:HttpSessionRequestHandler: ReqURL: {0}{1}", connectRequest == null ? string.Empty : connectRequest.RequestUri.ToString(), string.Empty, System.Threading.Thread.CurrentThread.ManagedThreadId);
 
                 // Loop through each subsequest request on this particular client connection
                 // (assuming HTTP connection is kept alive by client)

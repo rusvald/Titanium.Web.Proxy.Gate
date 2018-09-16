@@ -45,6 +45,7 @@ namespace Titanium.Web.Proxy
             {
                 string connectHostname = null;
                 TunnelConnectSessionEventArgs connectArgs = null;
+                System.Diagnostics.Debug.WriteLine("{2}:handleClient: End Point: {0}, CLient: {1}", endPoint.IpAddress, clientConnection.RemoteEndPoint, System.Threading.Thread.CurrentThread.ManagedThreadId);
 
 
                 // Client wants to create a secure tcp tunnel (probably its a HTTPS or Websocket request)
@@ -135,6 +136,7 @@ namespace Titanium.Web.Proxy
                     if (decryptSsl && isClientHello)
                     {
                         connectRequest.RequestUri = new Uri("https://" + httpUrl);
+                        System.Diagnostics.Debug.WriteLine("{2}:decryptSsl: ReqURL: {0}{1}", httpUrl, string.Empty, System.Threading.Thread.CurrentThread.ManagedThreadId);
 
                         bool http2Supported = false;
 
@@ -229,6 +231,7 @@ namespace Titanium.Web.Proxy
                                                         isConnect: true, applicationProtocols: SslExtensions.Http2ProtocolAsList,
                                                         noCache: true, cancellationToken: cancellationToken);
 
+                        System.Diagnostics.Debug.WriteLine("{2}:No decryptSsl: ReqURL: {0}{1}", httpUrl, string.Empty, System.Threading.Thread.CurrentThread.ManagedThreadId);
                         try
                         {
                             if (isClientHello)
@@ -271,6 +274,7 @@ namespace Titanium.Web.Proxy
 
                 if (connectArgs != null && await HttpHelper.IsPriMethod(clientStream) == 1)
                 {
+                    System.Diagnostics.Debug.WriteLine("{2}:Pri METHOD: {0}{1}", string.Empty, string.Empty, System.Threading.Thread.CurrentThread.ManagedThreadId);
                     // todo
                     string httpCmd = await clientStream.ReadLineAsync(cancellationToken);
                     if (httpCmd == "PRI * HTTP/2.0")

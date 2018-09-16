@@ -270,6 +270,12 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                 filterTraffic = FilterTrafficBySettings;
             });
 
+            if (!filterTraffic)
+            {
+                e.DecryptSsl = false;
+            }
+
+
             Models.MatchResult mresult = _filterMatchInclusive ? _filterMatchFinder.HasMatches(e.WebSession.Request.Url) : _filterMatchFinderExclusive.HasMatches(e.WebSession.Request.Url);
             if (_filterMatchInclusive)
             {
@@ -277,6 +283,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                 {
                     e.TerminateSession();
                     e.DenyConnect = true;
+                    e.DecryptSsl = false;//need to set for quick drop connection
                     terminateSession = true;
                 }
             }
@@ -286,6 +293,7 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                 {
                     e.TerminateSession();
                     e.DenyConnect = true;
+                    e.DecryptSsl = false;//need to set for quick drop connection
                     terminateSession = true;
                 }
             }
@@ -602,29 +610,66 @@ namespace Titanium.Web.Proxy.Examples.Wpf
 
             if (!isTunnelConnect || e.WebSession.Request.UpgradeToWebSocket)
             {
-                e.DataReceived += (sender, args) =>
-                {
-                    var session = (SessionEventArgs)sender;
-                    SessionListItem li;
-                    if (sessionDictionary.TryGetValue(session.WebSession, out li))
-                    {
-                        li.ReceivedDataCount += args.Count;
-                    }
-                };
+                e.DataReceived -= ReceivedData;
+                e.DataReceived += ReceivedData;
 
-                e.DataSent += (sender, args) =>
-                {
-                    var session = (SessionEventArgs)sender;
-                    SessionListItem li;
-                    if (sessionDictionary.TryGetValue(session.WebSession, out li))
-                    {
-                        li.SentDataCount += args.Count;
-                    }
-                };
+                e.DataSent -= SentData;
+                e.DataSent += SentData;
             }
 
             item.Update();
             return item;
+        }
+
+        private void ReceivedData(object sender, StreamExtended.Network.DataEventArgs args)
+        {
+            var session = (SessionEventArgs)sender;
+            SessionListItem li;
+            if (sessionDictionary.TryGetValue(session.WebSession, out li))
+            {
+                //System.Diagnostics.Trace.WriteLine(string.Format("{0}: Total: {1} Count: {2}", li.Number, li.ReceivedDataCount, args.Count));
+                System.Diagnostics.StackFrame fr = new System.Diagnostics.StackFrame(1, false);
+                System.Diagnostics.StackTrace st = new System.Diagnostics.StackTrace(1);
+                //System.Diagnostics.Trace.WriteLine(string.Format("{0}:{1}", fr.GetMethod().Name, fr.GetMethod().ReflectedType.Name));
+                for (int i = 0; i < st.FrameCount; i++)
+                {
+                    if (i > 1) break;
+
+                    fr = st.GetFrame(i);
+                    if (fr == null) break;
+                    string declTypeName = fr.GetMethod().DeclaringType.FullName;
+                    //System.Diagnostics.Trace.WriteLine(string.Format("{0}:{1}", fr.GetMethod().Name, fr.GetMethod().DeclaringType.FullName));
+                    if (declTypeName.StartsWith("Titanium.Web.Proxy.EventArguments.SessionEventArgs+") && i == 1) return;
+                }
+
+
+                li.ReceivedDataCount += args.Count;
+
+            }
+        }
+
+        private void SentData(object sender, StreamExtended.Network.DataEventArgs args)
+        {
+            var session = (SessionEventArgs)sender;
+            SessionListItem li;
+            if (sessionDictionary.TryGetValue(session.WebSession, out li))
+            {
+                //System.Diagnostics.Trace.WriteLine(string.Format("{0}: Total: {1} Count: {2}", li.Number, li.ReceivedDataCount, args.Count));
+                System.Diagnostics.StackFrame fr = new System.Diagnostics.StackFrame(1, false);
+                System.Diagnostics.StackTrace st = new System.Diagnostics.StackTrace(1);
+                //System.Diagnostics.Trace.WriteLine(string.Format("{0}:{1}", fr.GetMethod().Name, fr.GetMethod().ReflectedType.Name));
+                for (int i = 0; i < st.FrameCount; i++)
+                {
+                    if (i > 1) break;
+
+                    fr = st.GetFrame(i);
+                    if (fr == null) break;
+                    string declTypeName = fr.GetMethod().DeclaringType.FullName;
+                    //System.Diagnostics.Trace.WriteLine(string.Format("{0}:{1}", fr.GetMethod().Name, fr.GetMethod().DeclaringType.FullName));
+                    if (declTypeName.StartsWith("Titanium.Web.Proxy.EventArguments.SessionEventArgs+") && i == 1) return;
+                }
+                li.SentDataCount += args.Count;
+            }
         }
 
         private void ListViewSessions_OnKeyDown(object sender, KeyEventArgs e)
@@ -887,6 +932,12 @@ namespace Titanium.Web.Proxy.Examples.Wpf
                 default:
                     break;
             }
+        }
+
+        private void btnClear_Click(object sender, RoutedEventArgs e)
+        {
+            Sessions.Clear();
+            sessionDictionary.Clear();
         }
     }
 }
